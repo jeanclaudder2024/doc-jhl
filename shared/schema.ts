@@ -63,12 +63,12 @@ export const insertProposalSchema = createInsertSchema(proposals).omit({
 }).extend({
   paymentTerms: z.object({
     upfrontPercent: z.number().min(10).max(100),
-    installments: z.number().optional(),
-    feeOnFull: z.boolean().optional(),
-    baseFee: z.number().optional(),
-  }).optional(),
+    installments: z.number().nullable().optional(),
+    feeOnFull: z.boolean().nullable().optional(),
+    baseFee: z.number().nullable().optional(),
+  }).nullable().optional(),
   totalDevelopmentFee: z.number().or(z.string()),
-  domainPackageFee: z.number().or(z.string()).optional(),
+  domainPackageFee: z.number().or(z.string()).nullable().optional(),
 });
 
 export const insertProposalItemSchema = createInsertSchema(proposalItems).omit({ id: true });
