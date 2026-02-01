@@ -1,0 +1,54 @@
+ Proposal overview
+Title: Service Agreement & Project Deliverables (Noviq ↔ JHL).
+Purpose: Document scope, payment terms, recurring support, and signatures for a project (e.g., development + hosting + add-ons).
+🔎 Sections & content
+Header & Parties
+
+Page title and parties line (Noviq — Jean Claude Dergham, JHL — Fadya Wahab).
+#client-name input (editable client name).
+1. Comprehensive Project Scope
+
+Several scope items describing deliverables (product modules, intelligence, admin panel, donation gateway).
+2. Financial Terms & Add-ons
+
+Primary investment table with Total Development Fee (example: €900).
+Optional domain package details.
+3. Payment Structures
+
+Three options (radio inputs):
+Milestone (30% upfront),
+Installment (50% upfront, months),
+Custom (custom upfront % via #upfront-pct, min 10%).
+Custom panel (#custom-panel) with inputs:
+#base-fee, #upfront-pct, #installments, #fee-on-full.
+Calculation results (upfront amount, remaining, monthly, service total, total).
+Print-only Payment Summary
+
+#print-summary (visible only when printing) with ps-* fields (option, base, upfront, months, monthly, fees, total, signatures).
+4. Recurring Support & Hosting
+
+Text explaining first-year free support and annual renewal fee (€300).
+Signature Blocks
+
+Two signature blocks:
+Noviq (Licensor) with #noviq-signature-img, #noviq-sign-date, draw/upload UI (#noviq-canvas, #noviq-upload-file) and status (#noviq-upload-status).
+Licensee (JHL) with analogous IDs (#licensee-signature-img, #licensee-sign-date, etc.).
+Draw, upload, clear actions; images persisted and shown in print.
+⚙️ Interactive behavior & rules
+Upfront % min = 10% enforced in UI and in calculations.
+Recalculation updates amounts live and refreshes populatePrintSummary().
+Print flow: bottom Print Proposal button (#print-btn-bottom) saves locally then opens print dialog. Print hides interactive elements and shows print-only summary.
+Dirty-tracking: changes set window.proposalDirty; beforeunload warns if not printed (to encourage printing to save).
+💾 Persistence & storage
+Local-first:
+localStorage for quick restore (lastSavedProposal, signature data URIs).
+IndexedDB stores in proposals and signatures (via openIDB, idbPut, idbGet).
+No remote save by default (Supabase code removed per your instruction).
+✅ Notes & suggestions
+The file indext.html is a single-file, self-contained interactive proposal — ready to print and persist locally.
+
+Want the print summary to hide "Months" and "Monthly" instead of showing "N/A"? I can change that. 💡
+If you want, I can also generate a React clone scaffold or an export (PDF) flow next. 🔧
+Would you like a plain-English summary to include in the printed proposal (short "What this contract covers" paragraph)?
+
+Raptor mini (Preview) • 1x
