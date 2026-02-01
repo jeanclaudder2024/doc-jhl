@@ -13,39 +13,43 @@ import { cn } from "@/lib/utils";
 import type { ProposalResponse, UpdateProposalRequest } from "@shared/routes";
 
 // Define the payment calculator logic separately for clarity
-function calculatePayments(totalFee: number, option: string, terms: any) {
+function calculatePayments(totalFee: number, option: string, terms: any, includeDomainPackage: boolean) {
   let upfront = 0;
   let remaining = 0;
   let monthly = 0;
-  let serviceFee = 0;
   let months = terms.installments || 1;
+  let extraFee = 0;
 
-  // Base fee logic (if fee is applied)
-  const baseFeeAmount = terms.feeOnFull ? (terms.baseFee || 0) : 0; 
-  // NOTE: Simple fee logic for MVP based on description:
-  // Usually fees are percentage based, but description says "base-fee".
-  // Assuming simpler logic: if Custom + FeeOnFull, add baseFee to total.
-  
-  const grandTotal = totalFee + baseFeeAmount;
+  // Add domain package if selected (150 euros)
+  const domainPackageAmount = includeDomainPackage ? 150 : 0;
+  const baseTotal = totalFee + domainPackageAmount;
 
   if (option === 'milestone') {
-    upfront = grandTotal * 0.30;
-    remaining = grandTotal - upfront;
+    upfront = baseTotal * 0.30;
+    remaining = baseTotal - upfront;
     monthly = 0; // Not applicable
+    months = 0;
   } else if (option === 'installment') {
-    upfront = grandTotal * 0.50;
-    remaining = grandTotal - upfront;
-    monthly = remaining / 3; // Standard 3 months for installment per description context usually
+    upfront = baseTotal * 0.50;
+    remaining = baseTotal - upfront;
+    monthly = remaining / 3; // Standard 3 months for installment
     months = 3;
   } else if (option === 'custom') {
     const pct = Math.max(10, terms.upfrontPercent || 10) / 100;
-    upfront = grandTotal * pct;
-    remaining = grandTotal - upfront;
     months = Math.max(1, terms.installments || 1);
+    
+    // 7% extra fee for each month beyond the first
+    const extraMonths = Math.max(0, months - 1);
+    extraFee = baseTotal * 0.07 * extraMonths;
+    
+    const grandTotalWithFee = baseTotal + extraFee;
+    upfront = grandTotalWithFee * pct;
+    remaining = grandTotalWithFee - upfront;
     monthly = remaining / months;
   }
 
-  return { upfront, remaining, monthly, grandTotal, months };
+  const grandTotal = baseTotal + extraFee;
+  return { upfront, remaining, monthly, grandTotal, months, extraFee, domainPackageAmount };
 }
 
 interface ProposalDocumentProps {
@@ -66,22 +70,21 @@ export function ProposalDocument({
   // Local state for interactive elements (even if synced with backend)
   const [paymentOption, setPaymentOption] = useState(proposal.paymentOption || 'milestone');
   const [paymentTerms, setPaymentTerms] = useState(proposal.paymentTerms || { upfrontPercent: 30 });
-  const [totals, setTotals] = useState({ upfront: 0, remaining: 0, monthly: 0, grandTotal: 0, months: 0 });
+  const [includeDomainPackage, setIncludeDomainPackage] = useState(parseFloat((proposal.domainPackageFee || "0") as string) >= 150);
+  const [totals, setTotals] = useState({ upfront: 0, remaining: 0, monthly: 0, grandTotal: 0, months: 0, extraFee: 0, domainPackageAmount: 0 });
 
   // Sync state when props change
   useEffect(() => {
     setPaymentOption(proposal.paymentOption);
     setPaymentTerms(proposal.paymentTerms || { upfrontPercent: 30 });
+    setIncludeDomainPackage(parseFloat((proposal.domainPackageFee || "0") as string) >= 150);
   }, [proposal]);
 
   // Recalculate whenever inputs change
   useEffect(() => {
     const totalDevFee = parseFloat(proposal.totalDevelopmentFee as string);
-    const domainFee = parseFloat((proposal.domainPackageFee || "0") as string);
-    const total = totalDevFee + domainFee;
-    
-    setTotals(calculatePayments(total, paymentOption, paymentTerms));
-  }, [paymentOption, paymentTerms, proposal.totalDevelopmentFee, proposal.domainPackageFee]);
+    setTotals(calculatePayments(totalDevFee, paymentOption, paymentTerms, includeDomainPackage));
+  }, [paymentOption, paymentTerms, proposal.totalDevelopmentFee, includeDomainPackage]);
 
   const handlePaymentOptionChange = (val: string) => {
     if (readOnly) return;
@@ -94,6 +97,12 @@ export function ProposalDocument({
     const newTerms = { ...paymentTerms, [key]: value };
     setPaymentTerms(newTerms);
     onUpdate?.({ paymentTerms: newTerms });
+  };
+
+  const handleDomainPackageChange = (checked: boolean) => {
+    if (readOnly) return;
+    setIncludeDomainPackage(checked);
+    onUpdate?.({ domainPackageFee: checked ? "150" : "0" });
   };
 
   const currency = (num: number) => 
@@ -195,6 +204,24 @@ export function ProposalDocument({
             Financial Investment
           </h3>
           <div className="pl-11">
+            {/* Domain Package Option (No Print - interactive) */}
+            <div className="no-print mb-4 p-4 bg-accent/10 border border-accent/20 rounded-xl">
+              <div className="flex items-center space-x-3">
+                <Checkbox 
+                  id="domainPackage" 
+                  checked={includeDomainPackage}
+                  onCheckedChange={(c) => handleDomainPackageChange(c === true)}
+                  disabled={readOnly}
+                  data-testid="checkbox-domain-package"
+                />
+                <Label htmlFor="domainPackage" className="cursor-pointer">
+                  <span className="font-semibold text-primary">Include All Domain Types Package</span>
+                  <span className="text-muted-foreground ml-2">({currency(150)})</span>
+                  <p className="text-xs text-muted-foreground mt-0.5">Includes .com, .org, .net, .eu and country-specific domains setup</p>
+                </Label>
+              </div>
+            </div>
+
             <div className="border rounded-xl overflow-hidden">
               <table className="w-full text-sm text-left">
                 <thead className="bg-primary/5 text-primary font-semibold">
@@ -213,14 +240,25 @@ export function ProposalDocument({
                       {currency(parseFloat(proposal.totalDevelopmentFee as string))}
                     </td>
                   </tr>
-                  {parseFloat(proposal.domainPackageFee as string) > 0 && (
+                  {totals.domainPackageAmount > 0 && (
                     <tr>
                       <td className="p-4">
-                        <p className="font-medium">Domain & Setup Package</p>
-                        <p className="text-muted-foreground text-xs mt-0.5">Optional add-on</p>
+                        <p className="font-medium">All Domain Types Package</p>
+                        <p className="text-muted-foreground text-xs mt-0.5">Complete domain coverage</p>
                       </td>
                       <td className="p-4 text-right font-mono font-medium">
-                        {currency(parseFloat(proposal.domainPackageFee as string))}
+                        {currency(totals.domainPackageAmount)}
+                      </td>
+                    </tr>
+                  )}
+                  {totals.extraFee > 0 && (
+                    <tr>
+                      <td className="p-4">
+                        <p className="font-medium">Extended Payment Fee</p>
+                        <p className="text-muted-foreground text-xs mt-0.5">7% per additional month ({totals.months - 1} extra month{totals.months > 2 ? 's' : ''})</p>
+                      </td>
+                      <td className="p-4 text-right font-mono font-medium">
+                        {currency(totals.extraFee)}
                       </td>
                     </tr>
                   )}
@@ -305,6 +343,7 @@ export function ProposalDocument({
                         value={paymentTerms.upfrontPercent || 30}
                         onChange={(e) => handleTermChange('upfrontPercent', parseFloat(e.target.value))}
                         disabled={readOnly}
+                        data-testid="input-upfront-percent"
                       />
                       <p className="text-xs text-muted-foreground">Minimum 10% required</p>
                     </div>
@@ -317,18 +356,21 @@ export function ProposalDocument({
                         value={paymentTerms.installments || 1}
                         onChange={(e) => handleTermChange('installments', parseFloat(e.target.value))}
                         disabled={readOnly}
+                        data-testid="input-installments"
                       />
+                      <p className="text-xs text-muted-foreground">7% fee applies per extra month</p>
                     </div>
-                    {/* <div className="flex items-center space-x-2 pt-8">
-                      <Checkbox 
-                        id="feeOnFull" 
-                        checked={paymentTerms.feeOnFull || false}
-                        onCheckedChange={(c) => handleTermChange('feeOnFull', c === true)}
-                        disabled={readOnly}
-                      />
-                      <Label htmlFor="feeOnFull">Apply Service Fee?</Label>
-                    </div> */}
                   </div>
+                  {totals.extraFee > 0 && (
+                    <div className="mt-4 p-3 bg-accent/10 border border-accent/20 rounded-lg">
+                      <p className="text-sm font-medium text-primary">
+                        Extended payment fee: <span className="font-mono">{currency(totals.extraFee)}</span>
+                        <span className="text-muted-foreground font-normal ml-2">
+                          (7% x {totals.months - 1} extra month{totals.months > 2 ? 's' : ''})
+                        </span>
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -446,6 +488,111 @@ export function ProposalDocument({
               </div>
             </div>
 
+          </div>
+        </section>
+
+        {/* Print-Only Invoice Section */}
+        <section className="hidden print:block page-break mt-12">
+          <div className="border-2 border-primary p-8">
+            <div className="flex justify-between items-start mb-8">
+              <div>
+                <h2 className="text-3xl font-display font-bold text-primary mb-1">INVOICE</h2>
+                <p className="text-sm text-muted-foreground">Invoice #{proposal.id.toString().padStart(4, '0')}</p>
+                <p className="text-sm text-muted-foreground">Date: {format(new Date(), 'PPP')}</p>
+              </div>
+              <div className="text-right">
+                <div className="w-12 h-12 bg-primary text-white flex items-center justify-center font-display font-bold text-2xl rounded-lg ml-auto mb-2">N</div>
+                <p className="font-bold text-primary">NOVIQ Studio</p>
+                <p className="text-sm text-muted-foreground">Jean Claude Dergham</p>
+                <p className="text-sm text-muted-foreground">hello@noviq.com</p>
+              </div>
+            </div>
+
+            <div className="mb-8 p-4 bg-gray-50 rounded">
+              <p className="text-xs uppercase tracking-widest font-semibold text-muted-foreground mb-1">Bill To:</p>
+              <p className="font-semibold text-lg">{proposal.clientName}</p>
+            </div>
+
+            <table className="w-full text-sm mb-8">
+              <thead>
+                <tr className="border-b-2 border-primary">
+                  <th className="text-left py-3 font-semibold">Description</th>
+                  <th className="text-right py-3 font-semibold">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                <tr>
+                  <td className="py-3">
+                    <p className="font-medium">Development Services</p>
+                    <p className="text-xs text-muted-foreground">{proposal.title}</p>
+                  </td>
+                  <td className="py-3 text-right font-mono">
+                    {currency(parseFloat(proposal.totalDevelopmentFee as string))}
+                  </td>
+                </tr>
+                {totals.domainPackageAmount > 0 && (
+                  <tr>
+                    <td className="py-3">
+                      <p className="font-medium">All Domain Types Package</p>
+                      <p className="text-xs text-muted-foreground">Complete domain coverage (.com, .org, .net, .eu, etc.)</p>
+                    </td>
+                    <td className="py-3 text-right font-mono">
+                      {currency(totals.domainPackageAmount)}
+                    </td>
+                  </tr>
+                )}
+                {totals.extraFee > 0 && (
+                  <tr>
+                    <td className="py-3">
+                      <p className="font-medium">Extended Payment Fee</p>
+                      <p className="text-xs text-muted-foreground">7% per additional month ({totals.months - 1} extra month{totals.months > 2 ? 's' : ''})</p>
+                    </td>
+                    <td className="py-3 text-right font-mono">
+                      {currency(totals.extraFee)}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-primary font-bold">
+                  <td className="py-4 text-right uppercase text-xs tracking-widest">Total Due</td>
+                  <td className="py-4 text-right font-mono text-xl text-primary">
+                    {currency(totals.grandTotal)}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+
+            <div className="bg-primary/5 p-4 rounded mb-6">
+              <p className="font-semibold text-primary mb-2">Payment Schedule: <span className="capitalize">{paymentOption}</span></p>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Upfront Payment:</p>
+                  <p className="font-mono font-semibold">{currency(totals.upfront)}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Remaining Balance:</p>
+                  <p className="font-mono font-semibold">{currency(totals.remaining)}</p>
+                </div>
+                {totals.monthly > 0 && (
+                  <>
+                    <div>
+                      <p className="text-muted-foreground">Monthly Payment:</p>
+                      <p className="font-mono font-semibold">{currency(totals.monthly)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Duration:</p>
+                      <p className="font-mono font-semibold">{totals.months} month{totals.months > 1 ? 's' : ''}</p>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="text-center text-xs text-muted-foreground border-t pt-4">
+              <p>Thank you for your business!</p>
+              <p className="mt-1">Noviq Studio • hello@noviq.com</p>
+            </div>
           </div>
         </section>
 
