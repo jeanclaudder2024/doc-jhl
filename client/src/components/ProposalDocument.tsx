@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { SignaturePad } from "./SignaturePad";
 import { Printer, Download, Share2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { ProposalResponse, UpdateProposalRequest } from "@shared/routes";
+import type { ProposalResponse, UpdateProposalRequest } from "@shared/schema";
 
 // Define the payment calculator logic separately for clarity
 function calculatePayments(totalFee: number, option: string, terms: any, includeDomainPackage: boolean) {
