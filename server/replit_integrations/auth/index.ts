@@ -1,3 +1,2 @@
-export { setupAuth, isAuthenticated, getSession } from "./replitAuth";
-export { authStorage, type IAuthStorage } from "./storage";
-export { registerAuthRoutes } from "./routes";
+// Custom Authentication System - Replaces Replit Auth
+export { setupAuth, isAuthenticated, getSession, registerAuthRoutes, authStorage, type IAuthStorage } from "../../auth/customAuth";

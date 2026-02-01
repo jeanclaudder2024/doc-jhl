@@ -66,6 +66,35 @@ export async function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
+  // LOCAL DEVELOPMENT MODE: Skip Replit OAuth if REPL_ID is not set
+  if (!process.env.REPL_ID) {
+    console.log("⚠️  Running in LOCAL DEVELOPMENT MODE - Auth bypassed");
+
+    passport.serializeUser((user: Express.User, cb) => cb(null, user));
+    passport.deserializeUser((user: Express.User, cb) => cb(null, user));
+
+    // Mock login for local development
+    app.get("/api/login", (req, res) => {
+      const mockUser = {
+        claims: { sub: "local-dev-user", email: "admin@local.dev", first_name: "Admin", last_name: "User" },
+        expires_at: Math.floor(Date.now() / 1000) + 86400, // 24 hours
+      };
+      req.login(mockUser, (err) => {
+        if (err) return res.status(500).json({ message: "Login failed" });
+        res.redirect("/");
+      });
+    });
+
+    app.get("/api/callback", (req, res) => res.redirect("/"));
+
+    app.get("/api/logout", (req, res) => {
+      req.logout(() => res.redirect("/"));
+    });
+
+    return;
+  }
+
+  // PRODUCTION MODE: Use Replit OAuth
   const config = await getOidcConfig();
 
   const verify: VerifyFunction = async (

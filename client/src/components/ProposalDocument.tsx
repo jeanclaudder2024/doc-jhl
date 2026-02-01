@@ -37,11 +37,11 @@ function calculatePayments(totalFee: number, option: string, terms: any, include
   } else if (option === 'custom') {
     const pct = Math.max(10, terms.upfrontPercent || 10) / 100;
     months = Math.max(1, terms.installments || 1);
-    
+
     // 7% extra fee for each month beyond the first
     const extraMonths = Math.max(0, months - 1);
     extraFee = baseTotal * 0.07 * extraMonths;
-    
+
     const grandTotalWithFee = baseTotal + extraFee;
     upfront = grandTotalWithFee * pct;
     remaining = grandTotalWithFee - upfront;
@@ -60,9 +60,9 @@ interface ProposalDocumentProps {
   onSign?: (role: 'noviq' | 'licensee', signature: string) => void;
 }
 
-export function ProposalDocument({ 
-  proposal, 
-  readOnly = false, 
+export function ProposalDocument({
+  proposal,
+  readOnly = false,
   isPublic = false,
   onUpdate,
   onSign
@@ -72,6 +72,8 @@ export function ProposalDocument({
   const [paymentTerms, setPaymentTerms] = useState(proposal.paymentTerms || { upfrontPercent: 30 });
   const [includeDomainPackage, setIncludeDomainPackage] = useState(parseFloat((proposal.domainPackageFee || "0") as string) >= 150);
   const [totals, setTotals] = useState({ upfront: 0, remaining: 0, monthly: 0, grandTotal: 0, months: 0, extraFee: 0, domainPackageAmount: 0 });
+  const [wantsToResign, setWantsToResign] = useState(false);
+
 
   // Sync state when props change
   useEffect(() => {
@@ -105,7 +107,7 @@ export function ProposalDocument({
     onUpdate?.({ domainPackageFee: checked ? "150" : "0" });
   };
 
-  const currency = (num: number) => 
+  const currency = (num: number) =>
     new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR' }).format(num);
 
   const handlePrint = () => {
@@ -124,7 +126,7 @@ export function ProposalDocument({
             <Printer className="w-4 h-4 mr-2" /> Print / Save PDF
           </Button>
           <Button variant="outline" size="sm" onClick={() => {
-            navigator.share?.({ title: proposal.title, url: window.location.href }).catch(() => {});
+            navigator.share?.({ title: proposal.title, url: window.location.href }).catch(() => { });
           }}>
             <Share2 className="w-4 h-4" />
           </Button>
@@ -133,7 +135,7 @@ export function ProposalDocument({
 
       {/* Document Container */}
       <div className="bg-white paper-texture shadow-xl rounded-none md:rounded-xl min-h-[1123px] w-full p-8 md:p-16 text-foreground print:shadow-none print:p-0">
-        
+
         {/* Header */}
         <header className="border-b-2 border-primary/10 pb-8 mb-12">
           <div className="flex justify-between items-end mb-6">
@@ -162,8 +164,8 @@ export function ProposalDocument({
               {readOnly ? (
                 <p className="font-semibold text-lg">{proposal.clientName}</p>
               ) : (
-                <Input 
-                  value={proposal.clientName} 
+                <Input
+                  value={proposal.clientName}
                   onChange={(e) => onUpdate?.({ clientName: e.target.value })}
                   className="text-lg font-semibold border-none shadow-none p-0 h-auto rounded-none border-b border-dashed border-primary/20 focus-visible:ring-0 focus-visible:border-primary placeholder:text-muted-foreground/50"
                   placeholder="Enter Client Name"
@@ -207,8 +209,8 @@ export function ProposalDocument({
             {/* Domain Package Option (No Print - interactive) */}
             <div className="no-print mb-4 p-4 bg-accent/10 border border-accent/20 rounded-xl">
               <div className="flex items-center space-x-3">
-                <Checkbox 
-                  id="domainPackage" 
+                <Checkbox
+                  id="domainPackage"
                   checked={includeDomainPackage}
                   onCheckedChange={(c) => handleDomainPackageChange(c === true)}
                   disabled={readOnly}
@@ -281,11 +283,11 @@ export function ProposalDocument({
             Payment Structure
           </h3>
           <div className="pl-11">
-            
+
             {/* Interactive Selection (Hidden in Print) */}
             <div className="no-print mb-8">
-              <RadioGroup 
-                value={paymentOption} 
+              <RadioGroup
+                value={paymentOption}
                 onValueChange={handlePaymentOptionChange}
                 className="grid grid-cols-1 md:grid-cols-3 gap-4"
               >
@@ -297,7 +299,7 @@ export function ProposalDocument({
                   >
                     <span className="text-lg font-bold mb-2">Milestone</span>
                     <span className="text-center text-xs text-muted-foreground leading-snug">
-                      Standard option. <br/> 30% Upfront, 70% Completion.
+                      Standard option. <br /> 30% Upfront, 70% Completion.
                     </span>
                   </Label>
                 </div>
@@ -310,7 +312,7 @@ export function ProposalDocument({
                   >
                     <span className="text-lg font-bold mb-2">Installment</span>
                     <span className="text-center text-xs text-muted-foreground leading-snug">
-                      Flexible. <br/> 50% Upfront, split remainder over 3 months.
+                      Flexible. <br /> 50% Upfront, split remainder over 3 months.
                     </span>
                   </Label>
                 </div>
@@ -323,7 +325,7 @@ export function ProposalDocument({
                   >
                     <span className="text-lg font-bold mb-2">Custom</span>
                     <span className="text-center text-xs text-muted-foreground leading-snug">
-                      Tailored plan. <br/> Define percentage and duration.
+                      Tailored plan. <br /> Define percentage and duration.
                     </span>
                   </Label>
                 </div>
@@ -336,10 +338,10 @@ export function ProposalDocument({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label>Upfront Percentage (%)</Label>
-                      <Input 
-                        type="number" 
-                        min="10" 
-                        max="100" 
+                      <Input
+                        type="number"
+                        min="10"
+                        max="100"
                         value={paymentTerms.upfrontPercent || 30}
                         onChange={(e) => handleTermChange('upfrontPercent', parseFloat(e.target.value))}
                         disabled={readOnly}
@@ -349,10 +351,10 @@ export function ProposalDocument({
                     </div>
                     <div className="space-y-2">
                       <Label>Installment Months</Label>
-                      <Input 
-                        type="number" 
-                        min="1" 
-                        max="24" 
+                      <Input
+                        type="number"
+                        min="1"
+                        max="24"
                         value={paymentTerms.installments || 1}
                         onChange={(e) => handleTermChange('installments', parseFloat(e.target.value))}
                         disabled={readOnly}
@@ -380,7 +382,7 @@ export function ProposalDocument({
               <h4 className="font-display font-bold text-lg text-primary mb-4 border-b border-primary/10 pb-2">
                 Selected Plan: <span className="capitalize">{paymentOption}</span>
               </h4>
-              
+
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 <div>
                   <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Upfront</p>
@@ -391,7 +393,7 @@ export function ProposalDocument({
                   <p className="text-xl font-mono text-gray-700">{currency(totals.remaining)}</p>
                 </div>
                 {totals.monthly > 0 && (
-                   <div className="col-span-2 md:col-span-2">
+                  <div className="col-span-2 md:col-span-2">
                     <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Monthly Schedule</p>
                     <p className="text-xl font-mono text-gray-700">
                       {currency(totals.monthly)} <span className="text-sm text-muted-foreground font-sans font-normal">/ month for {totals.months} month{totals.months > 1 ? 's' : ''}</span>
@@ -415,7 +417,7 @@ export function ProposalDocument({
               <div className="relative z-10">
                 <p className="font-semibold text-lg text-primary mb-2">First Year Included</p>
                 <p className="text-gray-600 mb-4 text-sm leading-relaxed">
-                  We provide comprehensive support, hosting maintenance, and security updates for the first 12 months at no additional cost. 
+                  We provide comprehensive support, hosting maintenance, and security updates for the first 12 months at no additional cost.
                   This ensures your platform remains secure, fast, and operational.
                 </p>
                 <div className="flex items-center gap-2 text-sm font-medium text-primary">
@@ -426,36 +428,36 @@ export function ProposalDocument({
             </div>
           </div>
         </section>
-        
+
         <Separator className="my-12" />
 
         {/* Signatures */}
         <section className="break-inside-avoid">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-            
+
             {/* Noviq Signature */}
             <div>
               <p className="text-xs uppercase tracking-widest font-bold mb-4 text-primary">Signed by Noviq (Licensor)</p>
-              
+
               {/* Only Noviq (Admin) can sign here */}
               {!isPublic && !readOnly ? (
-                 <SignaturePad 
-                   label="Jean Claude Dergham"
-                   initialData={proposal.noviqSignature}
-                   onSave={(sig) => onSign?.('noviq', sig)}
-                   onClear={() => {}} // Clear not implemented in this MVP hook
-                   readOnly={false}
-                 />
-              ) : (
-                <SignaturePad 
+                <SignaturePad
                   label="Jean Claude Dergham"
                   initialData={proposal.noviqSignature}
-                  onSave={() => {}}
-                  onClear={() => {}}
+                  onSave={(sig) => onSign?.('noviq', sig)}
+                  onClear={() => { }} // Clear not implemented in this MVP hook
+                  readOnly={false}
+                />
+              ) : (
+                <SignaturePad
+                  label="Jean Claude Dergham"
+                  initialData={proposal.noviqSignature}
+                  onSave={() => { }}
+                  onClear={() => { }}
                   readOnly={true}
                 />
               )}
-              
+
               <div className="mt-2 text-xs text-muted-foreground font-mono">
                 Date: {proposal.noviqSignDate ? format(new Date(proposal.noviqSignDate), 'PPP') : '__________________'}
               </div>
@@ -464,26 +466,41 @@ export function ProposalDocument({
             {/* Licensee Signature */}
             <div>
               <p className="text-xs uppercase tracking-widest font-bold mb-4 text-primary">Signed by {proposal.clientName || "Licensee"}</p>
-              
+
               {/* Only Public User (Licensee) can sign here */}
               {isPublic && !readOnly ? (
-                 <SignaturePad 
-                   label={proposal.clientName || "Authorized Signature"}
-                   initialData={proposal.licenseeSignature}
-                   onSave={(sig) => onSign?.('licensee', sig)}
-                   onClear={() => {}}
-                   readOnly={!!proposal.licenseeSignature} // Lock if already signed
-                 />
+                <>
+                  <SignaturePad
+                    label={proposal.clientName || "Authorized Signature"}
+                    initialData={wantsToResign ? null : proposal.licenseeSignature}
+                    onSave={(sig) => {
+                      onSign?.('licensee', sig);
+                      setWantsToResign(false);
+                    }}
+                    onClear={() => setWantsToResign(true)}
+                    readOnly={!!proposal.licenseeSignature && !wantsToResign}
+                  />
+                  {proposal.licenseeSignature && !wantsToResign && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setWantsToResign(true)}
+                      className="mt-2 text-xs"
+                    >
+                      Change Signature
+                    </Button>
+                  )}
+                </>
               ) : (
-                <SignaturePad 
+                <SignaturePad
                   label={proposal.clientName || "Authorized Signature"}
                   initialData={proposal.licenseeSignature}
-                  onSave={() => {}}
-                  onClear={() => {}}
+                  onSave={() => { }}
+                  onClear={() => { }}
                   readOnly={true}
                 />
               )}
-               <div className="mt-2 text-xs text-muted-foreground font-mono">
+              <div className="mt-2 text-xs text-muted-foreground font-mono">
                 Date: {proposal.licenseeSignDate ? format(new Date(proposal.licenseeSignDate), 'PPP') : '__________________'}
               </div>
             </div>

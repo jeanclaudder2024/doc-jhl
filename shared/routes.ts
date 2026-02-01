@@ -90,6 +90,20 @@ export const api = {
         404: errorSchemas.notFound,
       },
     },
+    publicUpdate: {
+      method: 'PUT' as const,
+      path: '/api/public/proposals/:id',
+      input: z.object({
+        paymentOption: z.enum(['full', 'milestone', 'custom']).optional(),
+        paymentTerms: z.any().optional(),
+        domainPackageFee: z.union([z.string(), z.number()]).optional(),
+      }),
+      responses: {
+        200: z.custom<any>(),
+        400: errorSchemas.validation,
+        404: errorSchemas.notFound,
+      },
+    },
   },
 };
 

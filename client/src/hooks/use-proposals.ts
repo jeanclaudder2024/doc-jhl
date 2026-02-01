@@ -35,7 +35,7 @@ export function useProposal(id: number) {
 export function useCreateProposal() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  
+
   return useMutation({
     mutationFn: async (data: CreateProposalRequest) => {
       const res = await fetch(api.proposals.create.path, {
@@ -44,7 +44,7 @@ export function useCreateProposal() {
         body: JSON.stringify(data),
         credentials: "include",
       });
-      
+
       if (!res.ok) {
         if (res.status === 400) {
           const error = api.proposals.create.responses[400].parse(await res.json());
@@ -77,7 +77,7 @@ export function useUpdateProposal() {
         body: JSON.stringify(updates),
         credentials: "include",
       });
-      
+
       if (!res.ok) {
         throw new Error('Failed to update proposal');
       }
@@ -101,9 +101,9 @@ export function useDeleteProposal() {
   return useMutation({
     mutationFn: async (id: number) => {
       const url = buildUrl(api.proposals.delete.path, { id });
-      const res = await fetch(url, { 
-        method: api.proposals.delete.method, 
-        credentials: "include" 
+      const res = await fetch(url, {
+        method: api.proposals.delete.method,
+        credentials: "include"
       });
       if (!res.ok) throw new Error('Failed to delete');
     },
@@ -144,7 +144,7 @@ export function useSignProposal() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role, signature }),
       });
-      
+
       if (!res.ok) throw new Error('Failed to sign proposal');
       return api.proposals.sign.responses[200].parse(await res.json());
     },
@@ -153,6 +153,32 @@ export function useSignProposal() {
       // Also invalidate admin view if we happen to be logged in
       queryClient.invalidateQueries({ queryKey: [api.proposals.get.path, data.id] });
       toast({ title: "Signed", description: "Signature successfully recorded" });
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+}
+
+export function usePublicUpdateProposal() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, paymentOption, paymentTerms, domainPackageFee }: { id: number, paymentOption?: string, paymentTerms?: any, domainPackageFee?: string | number }) => {
+      const url = buildUrl(api.proposals.publicUpdate.path, { id });
+      const res = await fetch(url, {
+        method: api.proposals.publicUpdate.method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentOption, paymentTerms, domainPackageFee }),
+      });
+
+      if (!res.ok) throw new Error('Failed to update proposal');
+      return api.proposals.publicUpdate.responses[200].parse(await res.json());
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["public-proposal", data.id] });
+      toast({ title: "Saved", description: "Options updated" });
     },
     onError: (error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });

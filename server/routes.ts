@@ -50,7 +50,7 @@ export async function registerRoutes(
       const proposal = await storage.updateProposal(Number(req.params.id), input);
       res.json(proposal);
     } catch (err) {
-       if (err instanceof z.ZodError) {
+      if (err instanceof z.ZodError) {
         return res.status(400).json({
           message: err.errors[0].message,
           field: err.errors[0].path.join('.'),
@@ -78,11 +78,33 @@ export async function registerRoutes(
 
   app.post(api.proposals.sign.path, async (req, res) => {
     try {
-       const { role, signature } = api.proposals.sign.input.parse(req.body);
-       const proposal = await storage.signProposal(Number(req.params.id), role, signature);
-       res.json(proposal);
+      const { role, signature } = api.proposals.sign.input.parse(req.body);
+      const proposal = await storage.signProposal(Number(req.params.id), role, signature);
+      res.json(proposal);
     } catch (err) {
-       if (err instanceof z.ZodError) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join('.'),
+        });
+      }
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Public update for payment options only
+  app.put(api.proposals.publicUpdate.path, async (req, res) => {
+    try {
+      const { paymentOption, paymentTerms, domainPackageFee } = api.proposals.publicUpdate.input.parse(req.body);
+      const proposal = await storage.getPublicProposal(Number(req.params.id));
+      if (!proposal) {
+        return res.status(404).json({ message: 'Proposal not found' });
+      }
+      // Only allow updating payment option, terms, and domain package fee
+      const updated = await storage.updateProposal(Number(req.params.id), { paymentOption, paymentTerms, domainPackageFee } as any);
+      res.json(updated);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
         return res.status(400).json({
           message: err.errors[0].message,
           field: err.errors[0].path.join('.'),
@@ -109,10 +131,30 @@ export async function seedDatabase() {
       domainPackageFee: 0,
       paymentOption: "milestone",
       items: [
-        { title: "Product Modules", description: "Core functionality implementation." },
-        { title: "Intelligence", description: "AI integration and data analysis." },
-        { title: "Admin Panel", description: "Dashboard for management." },
-        { title: "Donation Gateway", description: "Payment processing integration." }
+        {
+          title: "Full Proposal Execution",
+          description: "Integration of all features, visual identities, and structural models outlined in the JHL Proposal dated January 20, 2026."
+        },
+        {
+          title: "Smart-Plate Barcode System",
+          description: "Development of a barcode engine for meal plates linking to digital profiles for calories, recipes, and full nutritional transparency."
+        },
+        {
+          title: "Digital Ecosystem & B2B",
+          description: "Implementation of B2B Direct, B2B Managed, and Event subscription modules with dedicated Client Dashboards."
+        },
+        {
+          title: "Humanitarian Gateway",
+          description: "A fully integrated worldwide donation and social impact system."
+        },
+        {
+          title: "Marketing & Finance",
+          description: "Full setup of social media presence, Meta marketing accounts, and MetaTrader Business Account configuration."
+        },
+        {
+          title: "Intelligence",
+          description: "Admin Control Panel featuring an Integrated AI Assistant for operations and content management."
+        }
       ]
     });
     console.log("Seeding complete.");
