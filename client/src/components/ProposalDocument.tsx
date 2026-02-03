@@ -8,9 +8,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { SignaturePad } from "./SignaturePad";
-import { Printer, Download, Share2 } from "lucide-react";
+import { Printer, Download, Share2, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ProposalResponse, UpdateProposalRequest } from "@shared/schema";
+import { generateProposalWord } from "@/lib/generate-word";
 
 // Define the payment calculator logic separately for clarity
 function calculatePayments(totalFee: number, option: string, terms: any, includeDomainPackage: boolean) {
@@ -114,6 +115,16 @@ export function ProposalDocument({
     window.print();
   };
 
+  const handleDownloadWord = async () => {
+    await generateProposalWord(
+      proposal,
+      totals,
+      paymentOption,
+      paymentTerms,
+      includeDomainPackage
+    );
+  };
+
   return (
     <div className="max-w-4xl mx-auto">
       {/* Action Bar (No Print) */}
@@ -129,6 +140,9 @@ export function ProposalDocument({
             navigator.share?.({ title: proposal.title, url: window.location.href }).catch(() => { });
           }}>
             <Share2 className="w-4 h-4" />
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleDownloadWord}>
+            <FileText className="w-4 h-4 mr-2" /> Download Word
           </Button>
         </div>
       </div>
